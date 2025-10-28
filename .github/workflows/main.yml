@@ -27,8 +27,8 @@
          chmod 700 ~/.ssh
          chmod 600 ~/.ssh/id_rsa
          ssh-keyscan github.com >> ~/.ssh/known_hosts
-         git config --global user.email "你的邮箱"
-         git config --global user.name "你的用户名"
+         git config --global user.email "lutiansuo114514@outlook.com"
+         git config --global user.name "TRUTHluming"
          npm install hexo-cli -g
          npm install
 
