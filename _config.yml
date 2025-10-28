@@ -101,4 +101,8 @@ theme: arknights
 # Deployment
 ## Docs: https://hexo.io/docs/one-command-deployment
 deploy:
-  type: ''
+type: git
+repo: <git@github.com:TRUTHluming/TRUTHluming.github.io.git> # 生成后文件的库的ssh地址
+branch: master # 分支，默认为gh-pages，建议使用master
+message: message # 提交消息，可选
+
