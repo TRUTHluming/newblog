@@ -2,7 +2,7 @@
 <html lang="zh">
 <head>
 <meta charset="UTF-8">
-<title>街头生存：算法打工仔 (AR任务版)</title>
+<title>working (ARmode)</title>
 <style>
   body, html {
     margin: 0; padding: 0; overflow: hidden;
@@ -67,10 +67,10 @@
 
 <div id="ui">
   <div id="money">💰 0</div>
-  <div id="goal">目标: --</div>
-  <div id="status">等待接受任务...</div>
-  <div id="distance">距离目标: --</div>
-  <div id="complete">🎉 恭喜通关!</div>
+  <div id="goal">goal: --</div>
+  <div id="status">waiting mission...</div>
+  <div id="distance">mission distance: --</div>
+  <div id="complete">🎉 congralation!</div>
 </div>
 
 <script>
@@ -109,8 +109,8 @@ function createTasks() {
 function startMission(distance, reward) {
   targetDistance = distance;
   rewardCoins = reward;
-  document.getElementById('goal').textContent = `目标: ${targetDistance}m`;
-  document.getElementById('status').textContent = `任务进行中...`;
+  document.getElementById('goal').textContent = `goal: ${targetDistance}m`;
+  document.getElementById('status').textContent = `walking...`;
   document.getElementById('task-area').innerHTML = '';
   startTracking();
 }
@@ -123,7 +123,7 @@ function startTracking() {
       const dist = calcDistance(startPos.latitude, startPos.longitude, pos.coords.latitude, pos.coords.longitude);
       updateUI(dist);
     }, err => {
-      document.getElementById('status').textContent = "⚠️ 启用定位权限以继续任务";
+      document.getElementById('status').textContent = "⚠️ location needed";
     }, { enableHighAccuracy: true });
   }
 }
@@ -140,12 +140,12 @@ function calcDistance(lat1, lon1, lat2, lon2) {
 
 function updateUI(dist) {
   if (hasCompleted) return;
-  document.getElementById('distance').textContent = `距离目标: ${dist.toFixed(1)} m / ${targetDistance} m`;
+  document.getElementById('distance').textContent = `goal distance: ${dist.toFixed(1)} m / ${targetDistance} m`;
   const progress = Math.min(dist / targetDistance, 1);
   document.getElementById('money').textContent = `💰 ${Math.floor(progress * rewardCoins)}`;
   if (dist >= targetDistance) {
     hasCompleted = true;
-    document.getElementById('status').textContent = "任务完成!";
+    document.getElementById('status').textContent = "misson success!";
     document.getElementById('complete').style.display = "block";
     navigator.geolocation.clearWatch(watchId);
   }
@@ -155,3 +155,4 @@ createTasks();
 </script>
 </body>
 </html>
+
