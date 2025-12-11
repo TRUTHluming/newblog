@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Street Survival: The Coder’s Quest (Bubble Demo)</title>
+<title>Street Survival: The Coder’s Quest</title>
 <style>
   body {
     text-align: center;
@@ -11,9 +11,7 @@
     background: linear-gradient(#c8e9ff, #f0f9ff);
     overflow: hidden;
   }
-  h2 {
-    margin-top: 20px;
-  }
+  h2 { margin-top: 20px; }
   #bubble-area {
     position: relative;
     width: 100%;
@@ -23,19 +21,26 @@
   .bubble {
     position: absolute;
     border-radius: 50%;
-    background: rgba(0,150,255,0.5);
-    color: #fff;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
+    color: white;
     font-weight: bold;
     cursor: pointer;
-    user-select: none;
     animation: float 8s infinite ease-in-out;
+    text-shadow: 1px 1px 2px #000;
+  }
+  .bubble.gold {
+    background: radial-gradient(circle, gold, orange);
+    box-shadow: 0 0 15px gold;
+  }
+  .bubble.normal {
+    background: rgba(0,150,255,0.6);
   }
   @keyframes float {
     0% { transform: translateY(0); }
-    50% { transform: translateY(-50px); }
+    50% { transform: translateY(-40px); }
     100% { transform: translateY(0); }
   }
   #game {
@@ -48,56 +53,91 @@
     margin-top: 20px;
     display: none;
   }
+  #ar-scene {
+    display: none;
+    width: 100%;
+    height: 100vh;
+  }
+  button {
+    margin: 10px;
+    padding: 10px 20px;
+  }
 </style>
 </head>
 <body>
 
 <h2>Street Survival: The Coder’s Quest</h2>
 
-<!-- 泡泡任务界面 -->
+<!-- 泡泡任务选择界面 -->
 <div id="bubble-area"></div>
 
-<!-- 游戏执行界面 -->
+<!-- 游戏进行界面 -->
 <div id="game">
   <div id="money">💰 0</div>
   <div id="goal">Goal: --</div>
   <p id="status">Start walking to complete your mission...</p>
   <p id="distance">Distance moved: 0 m</p>
   <p id="complete">🎉 Mission Complete!</p>
-  <button onclick="location.reload()">Restart</button>
+  <button onclick="restartGame()">Restart</button>
+  <button onclick="showAR()">Enter AR View</button>
 </div>
+
+<!-- AR 实景场景 -->
+<a-scene id="ar-scene" embedded arjs="sourceType: webcam; debugUIEnabled: false;">
+  <a-marker-camera preset="hiro"></a-marker-camera>
+  <a-box id="targetBox" position="0 0 0" color="yellow" scale="0.5 0.5 0.5"></a-box>
+</a-scene>
+
+<script src="https://cdn.jsdelivr.net/npm/aframe@1.2.0/dist/aframe.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/ar.js@3.3.2/aframe/build/aframe-ar.js"></script>
 
 <script>
 let startPos = null;
 let watchId = null;
 let hasCompleted = false;
 let targetDistance = 0;
+let rewardCoins = 0;
 
-// 初始化泡泡任务
+// 创建泡泡任务
 function createBubbles() {
   const area = document.getElementById('bubble-area');
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < 10; i++) {
     const bubble = document.createElement('div');
-    const distance = Math.floor(Math.random() * 6) + 5; // 5~10米
-    bubble.textContent = `${distance}m`;
-    bubble.className = 'bubble';
-    bubble.style.width = bubble.style.height = `${60 + Math.random()*40}px`;
+    const isGold = Math.random() < 0.1; // 10% 高级任务
+    const distance = isGold ? 5 : Math.floor(Math.random() * 3) + 8; // 金色短任务5m，普通8–10m
+    const reward = isGold ? 10 : Math.floor(distance * 0.5);
+
+    bubble.className = 'bubble ' + (isGold ? 'gold' : 'normal');
+    bubble.innerHTML = isGold
+      ? `<div>★ GOLD ★</div><div>${distance}m | 💰${reward}</div>`
+      : `<div>${distance}m</div><div>💰${reward}</div>`;
+
+    // 设置泡泡位置与大小
+    bubble.style.width = bubble.style.height = `${60 + Math.random() * 40}px`;
     bubble.style.left = `${Math.random() * 80 + 10}%`;
     bubble.style.top = `${Math.random() * 60 + 10}%`;
-    bubble.onclick = () => startMission(distance);
+
+    bubble.dataset.distance = distance;
+    bubble.dataset.reward = reward;
+    bubble.dataset.type = isGold ? 'gold' : 'normal';
+
+    bubble.onclick = () => startMission(bubble.dataset);
     area.appendChild(bubble);
   }
 }
 
-function startMission(distance) {
-  targetDistance = distance;
+// 开始任务
+function startMission(data) {
+  targetDistance = parseFloat(data.distance);
+  rewardCoins = parseInt(data.reward);
   document.getElementById('bubble-area').style.display = 'none';
   document.getElementById('game').style.display = 'block';
-  document.getElementById('goal').textContent = `Goal: ${targetDistance} meters`;
+  document.getElementById('goal').textContent =
+    `${data.type === 'gold' ? '★ GOLD MISSION ★' : 'Mission'}: ${targetDistance}m for ${rewardCoins} coins`;
   startTracking();
 }
 
-// 开启行走检测
+// 开启定位追踪
 function startTracking() {
   if (navigator.geolocation) {
     watchId = navigator.geolocation.watchPosition(pos => {
@@ -108,36 +148,51 @@ function startTracking() {
       document.getElementById('status').textContent = "⚠️ Please enable location access.";
     }, { enableHighAccuracy: true });
   } else {
-    document.getElementById('status').textContent = "Your device does not support location detection.";
+    document.getElementById('status').textContent = "Location not supported.";
   }
 }
 
-// 计算真实距离
+// 计算距离
 function haversine(lat1, lon1, lat2, lon2) {
   const R = 6371e3;
   const toRad = x => x * Math.PI / 180;
   const dLat = toRad(lat2 - lat1);
   const dLon = toRad(lon2 - lon1);
-  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
+  const a = Math.sin(dLat/2)**2 +
+            Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+            Math.sin(dLon/2)**2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+// 实时更新游戏状态
 function updateDisplay(dist) {
   if (hasCompleted) return;
   document.getElementById("distance").textContent = `Distance moved: ${dist.toFixed(1)} m / ${targetDistance} m`;
-
-  const money = Math.floor((dist / targetDistance) * targetDistance * 10);
+  const progress = Math.min(dist / targetDistance, 1);
+  const money = Math.floor(progress * rewardCoins);
   document.getElementById("money").textContent = `💰 ${money}`;
 
   if (dist >= targetDistance) {
     hasCompleted = true;
-    document.getElementById("status").textContent = "You’ve reached your goal!";
+    document.getElementById("status").textContent = "🎯 You’ve reached your goal!";
     document.getElementById("complete").style.display = "block";
     navigator.geolocation.clearWatch(watchId);
   }
 }
 
-// 初始化泡泡任务界面
+// 显示AR实景
+function showAR() {
+  document.getElementById('game').style.display = 'none';
+  document.getElementById('ar-scene').style.display = 'block';
+  alert('📸 Use your camera to find the yellow mission point!');
+}
+
+// 重置游戏
+function restartGame() {
+  location.reload();
+}
+
+// 初始化泡泡任务
 createBubbles();
 </script>
 </body>
