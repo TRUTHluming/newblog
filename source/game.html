@@ -1,354 +1,106 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>街头生存：算法打工仔</title>
-    <style>
-        /* --- 基础样式 --- */
-        body, html {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            font-family: 'Courier New', Courier, monospace;
-            background: #000;
-            color: #0f0;
-        }
-
-        /* --- 摄像头背景 --- */
-        #camera-feed {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            z-index: 1;
-            filter: grayscale(30%) contrast(1.2); /*稍微加点滤镜增加压抑感*/
-        }
-
-        /* --- UI 层 --- */
-        #ui-layer {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 10;
-            pointer-events: none; /* 让点击穿透到下面的按钮 */
-        }
-
-        /* --- 顶部 HUD --- */
-        .hud-top {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            right: 20px;
-            display: flex;
-            justify-content: space-between;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 10px;
-            border: 1px solid #0f0;
-            border-radius: 5px;
-            pointer-events: auto;
-        }
-
-        .coin-display {
-            font-size: 1.2rem;
-            font-weight: bold;
-            color: #ffd700;
-        }
-
-        .goal-display {
-            font-size: 0.9rem;
-            color: #fff;
-        }
-
-        /* --- 任务气泡 (AR元素) --- */
-        .job-bubble {
-            position: absolute;
-            width: 100px;
-            height: 100px;
-            border-radius: 50%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            cursor: pointer;
-            pointer-events: auto;
-            animation: float 3s infinite ease-in-out;
-            transition: transform 0.2s;
-            box-shadow: 0 0 15px rgba(0,0,0,0.5);
-            backdrop-filter: blur(5px);
-        }
-
-        .job-bubble:active {
-            transform: scale(0.9);
-        }
-
-        /* 垃圾工作样式 */
-        .job-bad {
-            background: rgba(255, 0, 0, 0.2);
-            border: 2px solid #ff4444;
-            color: #ffcccc;
-        }
-
-        /* 神仙工作样式 */
-        .job-good {
-            background: rgba(255, 215, 0, 0.3);
-            border: 2px solid #ffd700;
-            color: #fff;
-            box-shadow: 0 0 20px #ffd700;
-            z-index: 100;
-        }
-
-        .job-dist { font-size: 0.8rem; }
-        .job-pay { font-size: 1.2rem; font-weight: bold; }
-
-        /* --- 工作进行中遮罩 --- */
-        #working-overlay {
-            display: none;
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.9);
-            z-index: 20;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            pointer-events: auto;
-        }
-
-        .progress-bar-container {
-            width: 80%;
-            height: 20px;
-            background: #333;
-            border: 1px solid #0f0;
-            margin-top: 20px;
-        }
-
-        .progress-bar {
-            width: 0%;
-            height: 100%;
-            background: #0f0;
-            transition: width 0.1s linear;
-        }
-
-        /* --- 通关/失败 --- */
-        #end-screen {
-            display: none;
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: black;
-            z-index: 30;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            pointer-events: auto;
-        }
-
-        @keyframes float {
-            0% { transform: translateY(0px); }
-            50% { transform: translateY(-15px); }
-            100% { transform: translateY(0px); }
-        }
-
-        button {
-            background: #0f0;
-            color: #000;
-            border: none;
-            padding: 10px 20px;
-            font-size: 1.2rem;
-            cursor: pointer;
-            margin-top: 20px;
-            font-family: inherit;
-            font-weight: bold;
-        }
-    </style>
+<meta charset="UTF-8">
+<title>Street Survival: The Coder’s Quest</title>
+<style>
+  body {
+    text-align: center;
+    font-family: Arial, sans-serif;
+    margin-top: 60px;
+    background-color: #f9f9f9;
+  }
+  h2 {
+    color: #333;
+  }
+  #money, #goal {
+    font-size: 20px;
+    margin: 10px;
+  }
+  #status, #distance {
+    font-size: 18px;
+    margin-top: 20px;
+  }
+  #complete {
+    font-size: 22px;
+    color: green;
+    margin-top: 30px;
+    display: none;
+  }
+  button {
+    font-size: 16px;
+    margin-top: 20px;
+    padding: 10px 20px;
+  }
+</style>
 </head>
 <body>
 
-    <video id="camera-feed" autoplay playsinline muted></video>
+<h2>Street Survival: The Coder’s Quest</h2>
+<div id="money">💰 0</div>
+<div id="goal">Goal: 100 | Searching for work...</div>
+<p id="status">Working hard... collecting experience...</p>
+<p id="distance">Distance remaining: calculating...</p>
+<p id="complete">🎉 Congratulations! You've earned your ticket to leave this place!</p>
+<button id="restart" onclick="location.reload()" style="display:none;">Restart</button>
 
-    <div id="ui-layer">
-        <div class="hud-top">
-            <div class="coin-display">💰 <span id="coins">0</span></div>
-            <div class="goal-display">目标: 100 | <span id="status-text">寻找工作中...</span></div>
-        </div>
-        
-        <div id="jobs-container"></div>
-    </div>
+<script>
+let targetDistance = 100; // required meters to complete
+let startPos = null;
+let currentMoney = 0;
+let goal = 100;
+let hasCompleted = false;
 
-    <div id="working-overlay">
-        <h2 id="work-title">正在搬砖...</h2>
-        <p>距离目的地还有: <span id="work-dist">0</span>km</p>
-        <div class="progress-bar-container">
-            <div class="progress-bar" id="progress"></div>
-        </div>
-        <p style="font-size: 0.8rem; color: #888; margin-top: 10px;">(模拟行走中，请勿关闭)</p>
-    </div>
+// Haversine formula for distance between two GPS coordinates
+function haversine(lat1, lon1, lat2, lon2) {
+  const R = 6371e3; // Earth radius in meters
+  const toRad = x => x * Math.PI / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a = Math.sin(dLat / 2) ** 2 +
+            Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+            Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
 
-    <div id="end-screen">
-        <h1 id="end-title">恭喜通关！</h1>
-        <p id="end-desc">你终于攒够了买一张离开这里的车票钱。</p>
-        <button onclick="location.reload()">重新开始</button>
-    </div>
+function updateDisplay(dist) {
+  if (hasCompleted) return;
+  document.getElementById("distance").textContent = 
+    `Distance moved: ${dist.toFixed(1)} m / ${targetDistance} m`;
 
-    <script>
-        // --- 游戏数据 ---
-        let coins = 0;
-        const GOAL = 100;
-        let isWorking = false;
-        
-        const uiCoins = document.getElementById('coins');
-        const jobsContainer = document.getElementById('jobs-container');
-        const workingOverlay = document.getElementById('working-overlay');
-        const progressBar = document.getElementById('progress');
-        const workDistDisplay = document.getElementById('work-dist');
-        const statusText = document.getElementById('status-text');
+  // Simulate earning money as distance increases
+  let progress = Math.min(dist / targetDistance, 1);
+  currentMoney = Math.floor(progress * goal);
+  document.getElementById("money").textContent = `💰 ${currentMoney}`;
 
-        // --- 1. 初始化摄像头 ---
-        async function initCamera() {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: "environment" } // 优先使用后置摄像头
-                });
-                const video = document.getElementById('camera-feed');
-                video.srcObject = stream;
-            } catch (err) {
-                alert("无法访问摄像头。请确保允许权限或使用HTTPS/Localhost环境。");
-                console.error(err);
-                // 如果没有摄像头，用灰色背景代替，保证游戏能玩
-                document.getElementById('camera-feed').style.background = "#222";
-            }
-        }
+  if (dist >= targetDistance) {
+    hasCompleted = true;
+    document.getElementById("status").textContent = "You’ve reached your goal!";
+    document.getElementById("complete").style.display = "block";
+    document.getElementById("restart").style.display = "inline-block";
+  }
+}
 
-        // --- 2. 任务生成算法 (核心逻辑) ---
-        function spawnJob() {
-            if (isWorking || coins >= GOAL) return;
+// Begin GPS tracking
+if (navigator.geolocation) {
+  navigator.geolocation.watchPosition(pos => {
+    if (!startPos) startPos = pos.coords;
+    const dist = haversine(startPos.latitude, startPos.longitude,
+                           pos.coords.latitude, pos.coords.longitude);
+    updateDisplay(dist);
+  }, err => {
+    document.getElementById("status").textContent =
+      "⚠️ Please enable location access to play this game.";
+  }, {
+    enableHighAccuracy: true,
+    maximumAge: 1000,
+    timeout: 10000
+  });
+} else {
+  document.getElementById("status").textContent =
+    "Your device does not support location detection.";
+}
+</script>
 
-            const jobEl = document.createElement('div');
-            jobEl.classList.add('job-bubble');
-
-            // 决定工作类型 (90% 坏工作, 10% 好工作)
-            const isGoodJob = Math.random() > 0.90;
-
-            let distance, pay, typeName;
-
-            if (isGoodJob) {
-                // 好工作：距离近 (0.1 - 0.5km)，钱多 (15 - 30金币)
-                distance = (Math.random() * 0.4 + 0.1).toFixed(1);
-                pay = Math.floor(Math.random() * 15) + 15;
-                typeName = "🔥福利单";
-                jobEl.classList.add('job-good');
-                
-                // 好工作消失得快
-                setTimeout(() => {
-                    if(jobEl.parentNode) jobEl.remove();
-                }, 3000); 
-            } else {
-                // 坏工作：距离远 (2.0 - 8.0km)，钱少 (1 - 5金币)
-                distance = (Math.random() * 6 + 2.0).toFixed(1);
-                pay = Math.floor(Math.random() * 5) + 1;
-                typeName = "苦力活";
-                jobEl.classList.add('job-bad');
-            }
-
-            // 随机屏幕位置
-            const top = Math.random() * 60 + 20; // 20% - 80%
-            const left = Math.random() * 80 + 10; // 10% - 90%
-            jobEl.style.top = top + '%';
-            jobEl.style.left = left + '%';
-
-            jobEl.innerHTML = `
-                <div style="font-size:0.8rem">${typeName}</div>
-                <div class="job-dist">${distance}km</div>
-                <div class="job-pay">¥${pay}</div>
-            `;
-
-            // 点击接单
-            jobEl.onclick = () => startWork(distance, pay);
-
-            jobsContainer.appendChild(jobEl);
-
-            // 坏工作存在时间久一点
-            if (!isGoodJob) {
-                setTimeout(() => {
-                    if(jobEl.parentNode) jobEl.remove();
-                }, 8000);
-            }
-        }
-
-        // --- 3. 工作/行走逻辑 ---
-        function startWork(distance, pay) {
-            isWorking = true;
-            jobsContainer.innerHTML = ''; // 清空屏幕上的其他任务
-            workingOverlay.style.display = 'flex';
-            statusText.innerText = "工作中...";
-            
-            // 游戏性设定：1km 需要 1秒钟 (模拟，实际可调慢)
-            // 如果想更讽刺，可以把坏工作的耗时系数调高
-            const timePerKm = 1000; 
-            const totalTime = distance * timePerKm;
-            let timeElapsed = 0;
-
-            const interval = setInterval(() => {
-                timeElapsed += 50; // 每50ms更新一次
-                const percentage = (timeElapsed / totalTime) * 100;
-                
-                // 更新UI
-                progressBar.style.width = percentage + '%';
-                const distLeft = (distance - (distance * (percentage/100))).toFixed(1);
-                workDistDisplay.innerText = distLeft;
-
-                if (timeElapsed >= totalTime) {
-                    clearInterval(interval);
-                    completeWork(pay);
-                }
-            }, 50);
-        }
-
-        function completeWork(pay) {
-            isWorking = false;
-            workingOverlay.style.display = 'none';
-            coins += pay;
-            uiCoins.innerText = coins;
-            statusText.innerText = `赚了 ${pay} 金币!`;
-
-            if (coins >= GOAL) {
-                winGame();
-            } else {
-                setTimeout(() => {
-                    statusText.innerText = "寻找工作中...";
-                }, 2000);
-            }
-        }
-
-        // --- 4. 游戏循环 ---
-        function winGame() {
-            document.getElementById('end-screen').style.display = 'flex';
-        }
-
-        // 启动
-        initCamera();
-        
-        // 定时生成任务
-        setInterval(() => {
-            // 最多同时存在 4 个任务
-            if (jobsContainer.children.length < 4) {
-                spawnJob();
-            }
-        }, 2000);
-
-    </script>
 </body>
 </html>
