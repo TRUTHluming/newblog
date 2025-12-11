@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Street Survival: The Coder’s Quest</title>
+<title>Street Survival: The Coder’s Quest (AR Version)</title>
 <style>
   body {
     text-align: center;
@@ -82,10 +82,13 @@
   <button onclick="showAR()">Enter AR View</button>
 </div>
 
-<!-- AR 实景场景 -->
-<a-scene id="ar-scene" embedded arjs="sourceType: webcam; debugUIEnabled: false;">
-  <a-marker-camera preset="hiro"></a-marker-camera>
-  <a-box id="targetBox" position="0 0 0" color="yellow" scale="0.5 0.5 0.5"></a-box>
+<!-- 无Marker AR场景 -->
+<a-scene id="ar-scene" embedded arjs="sourceType: webcam; trackingMethod: best; debugUIEnabled: false;">
+  <a-entity camera></a-entity>
+  <!-- 虚拟任务点 -->
+  <a-sphere id="targetSphere" position="0 0 -3" radius="0.5" color="yellow"
+            animation="property: rotation; to: 0 360 0; loop: true; dur: 4000">
+  </a-sphere>
 </a-scene>
 
 <script src="https://cdn.jsdelivr.net/npm/aframe@1.2.0/dist/aframe.min.js"></script>
@@ -103,8 +106,8 @@ function createBubbles() {
   const area = document.getElementById('bubble-area');
   for (let i = 0; i < 10; i++) {
     const bubble = document.createElement('div');
-    const isGold = Math.random() < 0.1; // 10% 高级任务
-    const distance = isGold ? 5 : Math.floor(Math.random() * 3) + 8; // 金色短任务5m，普通8–10m
+    const isGold = Math.random() < 0.1; // 10% 概率为金色任务
+    const distance = isGold ? 5 : Math.floor(Math.random() * 3) + 8; // 金色5m, 普通8–10m
     const reward = isGold ? 10 : Math.floor(distance * 0.5);
 
     bubble.className = 'bubble ' + (isGold ? 'gold' : 'normal');
@@ -112,7 +115,6 @@ function createBubbles() {
       ? `<div>★ GOLD ★</div><div>${distance}m | 💰${reward}</div>`
       : `<div>${distance}m</div><div>💰${reward}</div>`;
 
-    // 设置泡泡位置与大小
     bubble.style.width = bubble.style.height = `${60 + Math.random() * 40}px`;
     bubble.style.left = `${Math.random() * 80 + 10}%`;
     bubble.style.top = `${Math.random() * 60 + 10}%`;
@@ -137,7 +139,7 @@ function startMission(data) {
   startTracking();
 }
 
-// 开启定位追踪
+// 开启地理位置检测
 function startTracking() {
   if (navigator.geolocation) {
     watchId = navigator.geolocation.watchPosition(pos => {
@@ -158,20 +160,17 @@ function haversine(lat1, lon1, lat2, lon2) {
   const toRad = x => x * Math.PI / 180;
   const dLat = toRad(lat2 - lat1);
   const dLon = toRad(lon2 - lon1);
-  const a = Math.sin(dLat/2)**2 +
-            Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
-            Math.sin(dLon/2)**2;
+  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-// 实时更新游戏状态
+// 更新显示
 function updateDisplay(dist) {
   if (hasCompleted) return;
   document.getElementById("distance").textContent = `Distance moved: ${dist.toFixed(1)} m / ${targetDistance} m`;
   const progress = Math.min(dist / targetDistance, 1);
   const money = Math.floor(progress * rewardCoins);
   document.getElementById("money").textContent = `💰 ${money}`;
-
   if (dist >= targetDistance) {
     hasCompleted = true;
     document.getElementById("status").textContent = "🎯 You’ve reached your goal!";
@@ -180,19 +179,18 @@ function updateDisplay(dist) {
   }
 }
 
-// 显示AR实景
+// 进入AR模式
 function showAR() {
   document.getElementById('game').style.display = 'none';
   document.getElementById('ar-scene').style.display = 'block';
-  alert('📸 Use your camera to find the yellow mission point!');
+  alert('📸 Move your phone to look around — find the glowing yellow mission point!');
 }
 
-// 重置游戏
+// 重置
 function restartGame() {
   location.reload();
 }
 
-// 初始化泡泡任务
 createBubbles();
 </script>
 </body>
