@@ -2,105 +2,143 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Street Survival: The Coder’s Quest</title>
+<title>Street Survival: The Coder’s Quest (Bubble Demo)</title>
 <style>
   body {
     text-align: center;
     font-family: Arial, sans-serif;
-    margin-top: 60px;
-    background-color: #f9f9f9;
+    margin: 0;
+    background: linear-gradient(#c8e9ff, #f0f9ff);
+    overflow: hidden;
   }
   h2 {
-    color: #333;
-  }
-  #money, #goal {
-    font-size: 20px;
-    margin: 10px;
-  }
-  #status, #distance {
-    font-size: 18px;
     margin-top: 20px;
+  }
+  #bubble-area {
+    position: relative;
+    width: 100%;
+    height: 80vh;
+    overflow: hidden;
+  }
+  .bubble {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(0,150,255,0.5);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    cursor: pointer;
+    user-select: none;
+    animation: float 8s infinite ease-in-out;
+  }
+  @keyframes float {
+    0% { transform: translateY(0); }
+    50% { transform: translateY(-50px); }
+    100% { transform: translateY(0); }
+  }
+  #game {
+    display: none;
+    margin-top: 40px;
   }
   #complete {
     font-size: 22px;
     color: green;
-    margin-top: 30px;
-    display: none;
-  }
-  button {
-    font-size: 16px;
     margin-top: 20px;
-    padding: 10px 20px;
+    display: none;
   }
 </style>
 </head>
 <body>
 
 <h2>Street Survival: The Coder’s Quest</h2>
-<div id="money">💰 0</div>
-<div id="goal">Goal: 100 | Searching for work...</div>
-<p id="status">Working hard... collecting experience...</p>
-<p id="distance">Distance remaining: calculating...</p>
-<p id="complete">🎉 Congratulations! You've earned your ticket to leave this place!</p>
-<button id="restart" onclick="location.reload()" style="display:none;">Restart</button>
+
+<!-- 泡泡任务界面 -->
+<div id="bubble-area"></div>
+
+<!-- 游戏执行界面 -->
+<div id="game">
+  <div id="money">💰 0</div>
+  <div id="goal">Goal: --</div>
+  <p id="status">Start walking to complete your mission...</p>
+  <p id="distance">Distance moved: 0 m</p>
+  <p id="complete">🎉 Mission Complete!</p>
+  <button onclick="location.reload()">Restart</button>
+</div>
 
 <script>
-let targetDistance = 100; // required meters to complete
 let startPos = null;
-let currentMoney = 0;
-let goal = 100;
+let watchId = null;
 let hasCompleted = false;
+let targetDistance = 0;
 
-// Haversine formula for distance between two GPS coordinates
+// 初始化泡泡任务
+function createBubbles() {
+  const area = document.getElementById('bubble-area');
+  for (let i = 0; i < 5; i++) {
+    const bubble = document.createElement('div');
+    const distance = Math.floor(Math.random() * 6) + 5; // 5~10米
+    bubble.textContent = `${distance}m`;
+    bubble.className = 'bubble';
+    bubble.style.width = bubble.style.height = `${60 + Math.random()*40}px`;
+    bubble.style.left = `${Math.random() * 80 + 10}%`;
+    bubble.style.top = `${Math.random() * 60 + 10}%`;
+    bubble.onclick = () => startMission(distance);
+    area.appendChild(bubble);
+  }
+}
+
+function startMission(distance) {
+  targetDistance = distance;
+  document.getElementById('bubble-area').style.display = 'none';
+  document.getElementById('game').style.display = 'block';
+  document.getElementById('goal').textContent = `Goal: ${targetDistance} meters`;
+  startTracking();
+}
+
+// 开启行走检测
+function startTracking() {
+  if (navigator.geolocation) {
+    watchId = navigator.geolocation.watchPosition(pos => {
+      if (!startPos) startPos = pos.coords;
+      const dist = haversine(startPos.latitude, startPos.longitude, pos.coords.latitude, pos.coords.longitude);
+      updateDisplay(dist);
+    }, err => {
+      document.getElementById('status').textContent = "⚠️ Please enable location access.";
+    }, { enableHighAccuracy: true });
+  } else {
+    document.getElementById('status').textContent = "Your device does not support location detection.";
+  }
+}
+
+// 计算真实距离
 function haversine(lat1, lon1, lat2, lon2) {
-  const R = 6371e3; // Earth radius in meters
+  const R = 6371e3;
   const toRad = x => x * Math.PI / 180;
   const dLat = toRad(lat2 - lat1);
   const dLon = toRad(lon2 - lon1);
-  const a = Math.sin(dLat / 2) ** 2 +
-            Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
-            Math.sin(dLon / 2) ** 2;
+  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
 function updateDisplay(dist) {
   if (hasCompleted) return;
-  document.getElementById("distance").textContent = 
-    `Distance moved: ${dist.toFixed(1)} m / ${targetDistance} m`;
+  document.getElementById("distance").textContent = `Distance moved: ${dist.toFixed(1)} m / ${targetDistance} m`;
 
-  // Simulate earning money as distance increases
-  let progress = Math.min(dist / targetDistance, 1);
-  currentMoney = Math.floor(progress * goal);
-  document.getElementById("money").textContent = `💰 ${currentMoney}`;
+  const money = Math.floor((dist / targetDistance) * targetDistance * 10);
+  document.getElementById("money").textContent = `💰 ${money}`;
 
   if (dist >= targetDistance) {
     hasCompleted = true;
     document.getElementById("status").textContent = "You’ve reached your goal!";
     document.getElementById("complete").style.display = "block";
-    document.getElementById("restart").style.display = "inline-block";
+    navigator.geolocation.clearWatch(watchId);
   }
 }
 
-// Begin GPS tracking
-if (navigator.geolocation) {
-  navigator.geolocation.watchPosition(pos => {
-    if (!startPos) startPos = pos.coords;
-    const dist = haversine(startPos.latitude, startPos.longitude,
-                           pos.coords.latitude, pos.coords.longitude);
-    updateDisplay(dist);
-  }, err => {
-    document.getElementById("status").textContent =
-      "⚠️ Please enable location access to play this game.";
-  }, {
-    enableHighAccuracy: true,
-    maximumAge: 1000,
-    timeout: 10000
-  });
-} else {
-  document.getElementById("status").textContent =
-    "Your device does not support location detection.";
-}
+// 初始化泡泡任务界面
+createBubbles();
 </script>
-
 </body>
 </html>
