@@ -1,98 +1,77 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh">
 <head>
 <meta charset="UTF-8">
-<title>Street Survival: The Coder’s Quest (AR Version)</title>
+<title>街头生存：算法打工仔 (AR任务版)</title>
 <style>
-  body {
-    text-align: center;
+  body, html {
+    margin: 0; padding: 0; overflow: hidden;
     font-family: Arial, sans-serif;
-    margin: 0;
-    background: linear-gradient(#c8e9ff, #f0f9ff);
-    overflow: hidden;
+    color: white;
   }
-  h2 { margin-top: 20px; }
-  #bubble-area {
+  #camera-bg {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    object-fit: cover;
+    z-index: -1;
+  }
+  #task-area {
     position: relative;
     width: 100%;
-    height: 80vh;
+    height: 100vh;
     overflow: hidden;
   }
-  .bubble {
+  .task {
     position: absolute;
     border-radius: 50%;
+    background: rgba(255,215,0,0.7);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    color: white;
-    font-weight: bold;
     cursor: pointer;
-    animation: float 8s infinite ease-in-out;
-    text-shadow: 1px 1px 2px #000;
-  }
-  .bubble.gold {
-    background: radial-gradient(circle, gold, orange);
-    box-shadow: 0 0 15px gold;
-  }
-  .bubble.normal {
-    background: rgba(0,150,255,0.6);
+    color: black;
+    font-weight: bold;
+    animation: float 6s infinite ease-in-out;
   }
   @keyframes float {
     0% { transform: translateY(0); }
-    50% { transform: translateY(-40px); }
+    50% { transform: translateY(-20px); }
     100% { transform: translateY(0); }
   }
-  #game {
-    display: none;
-    margin-top: 40px;
+  #ui {
+    position: absolute;
+    top: 10px; left: 0;
+    width: 100%;
+    text-align: center;
+  }
+  #money, #goal, #status, #distance {
+    margin: 5px 0;
+    font-size: 18px;
+    text-shadow: 1px 1px 3px #000;
   }
   #complete {
+    display: none;
     font-size: 22px;
-    color: green;
-    margin-top: 20px;
-    display: none;
-  }
-  #ar-scene {
-    display: none;
-    width: 100%;
-    height: 100vh;
-  }
-  button {
-    margin: 10px;
-    padding: 10px 20px;
+    color: lime;
+    margin-top: 15px;
   }
 </style>
 </head>
 <body>
 
-<h2>Street Survival: The Coder’s Quest</h2>
+<video id="camera-bg" autoplay playsinline muted></video>
 
-<!-- 泡泡任务选择界面 -->
-<div id="bubble-area"></div>
+<div id="task-area"></div>
 
-<!-- 游戏进行界面 -->
-<div id="game">
+<div id="ui">
   <div id="money">💰 0</div>
-  <div id="goal">Goal: --</div>
-  <p id="status">Start walking to complete your mission...</p>
-  <p id="distance">Distance moved: 0 m</p>
-  <p id="complete">🎉 Mission Complete!</p>
-  <button onclick="restartGame()">Restart</button>
-  <button onclick="showAR()">Enter AR View</button>
+  <div id="goal">目标: --</div>
+  <div id="status">等待接受任务...</div>
+  <div id="distance">距离目标: --</div>
+  <div id="complete">🎉 恭喜通关!</div>
 </div>
-
-<!-- 无Marker AR场景 -->
-<a-scene id="ar-scene" embedded arjs="sourceType: webcam; trackingMethod: best; debugUIEnabled: false;">
-  <a-entity camera></a-entity>
-  <!-- 虚拟任务点 -->
-  <a-sphere id="targetSphere" position="0 0 -3" radius="0.5" color="yellow"
-            animation="property: rotation; to: 0 360 0; loop: true; dur: 4000">
-  </a-sphere>
-</a-scene>
-
-<script src="https://cdn.jsdelivr.net/npm/aframe@1.2.0/dist/aframe.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/ar.js@3.3.2/aframe/build/aframe-ar.js"></script>
 
 <script>
 let startPos = null;
@@ -101,97 +80,78 @@ let hasCompleted = false;
 let targetDistance = 0;
 let rewardCoins = 0;
 
-// 创建泡泡任务
-function createBubbles() {
-  const area = document.getElementById('bubble-area');
-  for (let i = 0; i < 10; i++) {
-    const bubble = document.createElement('div');
-    const isGold = Math.random() < 0.1; // 10% 概率为金色任务
-    const distance = isGold ? 5 : Math.floor(Math.random() * 3) + 8; // 金色5m, 普通8–10m
-    const reward = isGold ? 10 : Math.floor(distance * 0.5);
+// 启动摄像头背景
+navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false })
+  .then(stream => {
+    const video = document.getElementById('camera-bg');
+    video.srcObject = stream;
+  })
+  .catch(err => alert("请允许摄像头权限以继续游戏"));
 
-    bubble.className = 'bubble ' + (isGold ? 'gold' : 'normal');
-    bubble.innerHTML = isGold
-      ? `<div>★ GOLD ★</div><div>${distance}m | 💰${reward}</div>`
-      : `<div>${distance}m</div><div>💰${reward}</div>`;
+// 随机生成任务泡泡
+function createTasks() {
+  const area = document.getElementById('task-area');
+  for (let i = 0; i < 5; i++) {
+    const task = document.createElement('div');
+    const distance = Math.floor(Math.random() * 6) + 5; // 5~10米
+    const reward = Math.floor(distance * 1.5);
 
-    bubble.style.width = bubble.style.height = `${60 + Math.random() * 40}px`;
-    bubble.style.left = `${Math.random() * 80 + 10}%`;
-    bubble.style.top = `${Math.random() * 60 + 10}%`;
-
-    bubble.dataset.distance = distance;
-    bubble.dataset.reward = reward;
-    bubble.dataset.type = isGold ? 'gold' : 'normal';
-
-    bubble.onclick = () => startMission(bubble.dataset);
-    area.appendChild(bubble);
+    task.className = 'task';
+    task.style.width = task.style.height = `${60 + Math.random() * 40}px`;
+    task.style.left = `${Math.random() * 80 + 10}%`;
+    task.style.top = `${Math.random() * 70 + 10}%`;
+    task.innerHTML = `<div>${distance}m</div><div>💰${reward}</div>`;
+    task.onclick = () => startMission(distance, reward);
+    area.appendChild(task);
   }
 }
 
-// 开始任务
-function startMission(data) {
-  targetDistance = parseFloat(data.distance);
-  rewardCoins = parseInt(data.reward);
-  document.getElementById('bubble-area').style.display = 'none';
-  document.getElementById('game').style.display = 'block';
-  document.getElementById('goal').textContent =
-    `${data.type === 'gold' ? '★ GOLD MISSION ★' : 'Mission'}: ${targetDistance}m for ${rewardCoins} coins`;
+function startMission(distance, reward) {
+  targetDistance = distance;
+  rewardCoins = reward;
+  document.getElementById('goal').textContent = `目标: ${targetDistance}m`;
+  document.getElementById('status').textContent = `任务进行中...`;
+  document.getElementById('task-area').innerHTML = '';
   startTracking();
 }
 
-// 开启地理位置检测
+// 开始地理定位追踪
 function startTracking() {
   if (navigator.geolocation) {
     watchId = navigator.geolocation.watchPosition(pos => {
       if (!startPos) startPos = pos.coords;
-      const dist = haversine(startPos.latitude, startPos.longitude, pos.coords.latitude, pos.coords.longitude);
-      updateDisplay(dist);
+      const dist = calcDistance(startPos.latitude, startPos.longitude, pos.coords.latitude, pos.coords.longitude);
+      updateUI(dist);
     }, err => {
-      document.getElementById('status').textContent = "⚠️ Please enable location access.";
+      document.getElementById('status').textContent = "⚠️ 启用定位权限以继续任务";
     }, { enableHighAccuracy: true });
-  } else {
-    document.getElementById('status').textContent = "Location not supported.";
   }
 }
 
-// 计算距离
-function haversine(lat1, lon1, lat2, lon2) {
+function calcDistance(lat1, lon1, lat2, lon2) {
   const R = 6371e3;
   const toRad = x => x * Math.PI / 180;
   const dLat = toRad(lat2 - lat1);
   const dLon = toRad(lon2 - lon1);
-  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
+  const a = Math.sin(dLat/2)**2 +
+            Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-// 更新显示
-function updateDisplay(dist) {
+function updateUI(dist) {
   if (hasCompleted) return;
-  document.getElementById("distance").textContent = `Distance moved: ${dist.toFixed(1)} m / ${targetDistance} m`;
+  document.getElementById('distance').textContent = `距离目标: ${dist.toFixed(1)} m / ${targetDistance} m`;
   const progress = Math.min(dist / targetDistance, 1);
-  const money = Math.floor(progress * rewardCoins);
-  document.getElementById("money").textContent = `💰 ${money}`;
+  document.getElementById('money').textContent = `💰 ${Math.floor(progress * rewardCoins)}`;
   if (dist >= targetDistance) {
     hasCompleted = true;
-    document.getElementById("status").textContent = "🎯 You’ve reached your goal!";
-    document.getElementById("complete").style.display = "block";
+    document.getElementById('status').textContent = "任务完成!";
+    document.getElementById('complete').style.display = "block";
     navigator.geolocation.clearWatch(watchId);
   }
 }
 
-// 进入AR模式
-function showAR() {
-  document.getElementById('game').style.display = 'none';
-  document.getElementById('ar-scene').style.display = 'block';
-  alert('📸 Move your phone to look around — find the glowing yellow mission point!');
-}
-
-// 重置
-function restartGame() {
-  location.reload();
-}
-
-createBubbles();
+createTasks();
 </script>
 </body>
 </html>
