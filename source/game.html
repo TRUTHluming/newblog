@@ -93,7 +93,7 @@ function createTasks() {
   const area = document.getElementById('task-area');
   for (let i = 0; i < 5; i++) {
     const task = document.createElement('div');
-    const distance = Math.floor(Math.random() * 6) + 5; // 5~10米
+    const distance = Math.floor(Math.random() * 6) + 1000; // 5~10米
     const reward = Math.floor(distance * 1.5);
 
     task.className = 'task';
@@ -155,4 +155,5 @@ createTasks();
 </script>
 </body>
 </html>
+
 
