@@ -1,5 +1,6 @@
 "use strict";
 const BGM_DISABLED_KEY = "arknights.bgm.disabled";
+const BGM_INITED_KEY = "bgmInited";
 function readBgmDisabled() {
     try {
         return window.localStorage.getItem(BGM_DISABLED_KEY) === "1";
@@ -41,6 +42,11 @@ function initBgmState() {
         setBgmControlUI(false);
         return;
     }
+    if (bgm.dataset[BGM_INITED_KEY] === "1") {
+        setBgmControlUI(!bgm.paused);
+        return;
+    }
+    bgm.dataset[BGM_INITED_KEY] = "1";
     const shouldAutoplay = getDefaultAutoplay(bgm);
     if (shouldAutoplay) {
         const p = bgm.play();
@@ -57,6 +63,7 @@ function BgmControl() {
     const bgm = document.getElementById("bgm");
     if (!bgm)
         return;
+    bgm.dataset[BGM_INITED_KEY] = "1";
     if (bgm.paused) {
         writeBgmDisabled(false);
         const p = bgm.play();
@@ -75,12 +82,27 @@ function BgmControl() {
     }
 }
 if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", initBgmState);
+    document.addEventListener("DOMContentLoaded", () => {
+        if (typeof requestAnimationFrame === "function")
+            requestAnimationFrame(initBgmState);
+        else
+            setTimeout(initBgmState, 0);
+    });
 }
 else {
-    initBgmState();
+    if (typeof requestAnimationFrame === "function")
+        requestAnimationFrame(initBgmState);
+    else
+        setTimeout(initBgmState, 0);
 }
-document.addEventListener("pjax:complete", initBgmState);
+const scheduleInitBgmState = () => {
+    if (typeof requestAnimationFrame === "function")
+        requestAnimationFrame(initBgmState);
+    else
+        setTimeout(initBgmState, 0);
+};
+document.addEventListener("pjax:success", scheduleInitBgmState);
+document.addEventListener("pjax:complete", scheduleInitBgmState);
 function getElement(string, item = document.documentElement) {
     let tmp = item.querySelector(string);
     if (tmp === null) {
