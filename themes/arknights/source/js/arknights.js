@@ -1,18 +1,86 @@
 "use strict";
-function BgmControl() {
-    const bgm = document.getElementById('bgm');
-    const control = document.getElementById("bgm-control");
-    if (bgm.paused) {
-        bgm.play();
-        control.setAttribute("fill", "#18d1ff");
-        control.style.transform = "scaleY(1)";
+const BGM_DISABLED_KEY = "arknights.bgm.disabled";
+function readBgmDisabled() {
+    try {
+        return window.localStorage.getItem(BGM_DISABLED_KEY) === "1";
     }
-    else {
-        bgm.pause();
-        control.setAttribute("fill", "currentColor");
-        control.style.transform = "scaleY(.5)";
+    catch {
+        return false;
     }
 }
+function writeBgmDisabled(disabled) {
+    try {
+        if (disabled)
+            window.localStorage.setItem(BGM_DISABLED_KEY, "1");
+        else
+            window.localStorage.removeItem(BGM_DISABLED_KEY);
+    }
+    catch { }
+}
+function setBgmControlUI(isPlaying) {
+    const control = document.getElementById("bgm-control");
+    if (!control)
+        return;
+    control.setAttribute("fill", isPlaying ? "#18d1ff" : "currentColor");
+    control.style.transform = isPlaying ? "scaleY(1)" : "scaleY(.5)";
+}
+function getDefaultAutoplay(bgm) {
+    const raw = bgm.getAttribute("data-autoplay");
+    if (raw === null)
+        return !!bgm.autoplay;
+    return raw === "" || raw === "true" || raw === "1";
+}
+function initBgmState() {
+    const bgm = document.getElementById("bgm");
+    if (!bgm)
+        return;
+    if (readBgmDisabled()) {
+        bgm.autoplay = false;
+        bgm.removeAttribute("autoplay");
+        bgm.pause();
+        setBgmControlUI(false);
+        return;
+    }
+    const shouldAutoplay = getDefaultAutoplay(bgm);
+    if (shouldAutoplay) {
+        const p = bgm.play();
+        if (p && typeof p.catch === "function") {
+            p.catch(() => setBgmControlUI(false));
+        }
+        setBgmControlUI(true);
+    }
+    else {
+        setBgmControlUI(!bgm.paused);
+    }
+}
+function BgmControl() {
+    const bgm = document.getElementById("bgm");
+    if (!bgm)
+        return;
+    if (bgm.paused) {
+        writeBgmDisabled(false);
+        const p = bgm.play();
+        if (p && typeof p.catch === "function") {
+            p.catch(() => {
+                writeBgmDisabled(true);
+                setBgmControlUI(false);
+            });
+        }
+        setBgmControlUI(true);
+    }
+    else {
+        writeBgmDisabled(true);
+        bgm.pause();
+        setBgmControlUI(false);
+    }
+}
+if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initBgmState);
+}
+else {
+    initBgmState();
+}
+document.addEventListener("pjax:complete", initBgmState);
 function getElement(string, item = document.documentElement) {
     let tmp = item.querySelector(string);
     if (tmp === null) {
