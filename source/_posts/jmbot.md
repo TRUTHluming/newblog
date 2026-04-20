@@ -1,6 +1,6 @@
 ---
 title : 搭建jm机器人过程记录
-data: 2025-10-30 10:24:21
+date: 2025-10-30 10:24:21
 tags: [code,QQ,python]
 category: program
 ---
